@@ -1,0 +1,14 @@
+main-js:
+  filter: rjsmin
+  output: ckanext-privatedatasets/%(version)s_main.js
+  extra:
+    preload:
+      - base/main
+  contents:
+    - allowed_users.js
+
+main-css:
+  output: ckanext-privatedatasets/%(version)s_main.css
+  filter: cssrewrite
+  contents:
+    - css/custom.css

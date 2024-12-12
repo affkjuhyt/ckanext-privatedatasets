@@ -1,0 +1,30 @@
+sudo: required
+language: python
+python:
+    - "2.7"
+env:
+    - CKANVERSION=2.7.3
+    - CKANVERSION=2.8.1
+    - CKANVERSION=2.8.2
+services:
+    - redis-server
+    - postgresql
+    - xvfb
+addons:
+    firefox: "60.1.0esr"
+before_install:
+    - wget https://github.com/mozilla/geckodriver/releases/download/v0.21.0/geckodriver-v0.21.0-linux64.tar.gz
+    - mkdir geckodriver
+    - tar -xzf geckodriver-v0.21.0-linux64.tar.gz -C geckodriver
+    - export PATH=$PATH:$PWD/geckodriver
+install:
+    - bash bin/travis-build.bash
+before_script:
+    - "export DISPLAY=:99.0"
+    - sleep 3 # give xvfb some time to start
+script:
+    - sh bin/travis-run.sh
+after_success: coveralls
+branches:
+    only:
+      - master
