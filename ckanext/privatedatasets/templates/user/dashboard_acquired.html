@@ -3,7 +3,7 @@
 {% block dashboard_activity_stream_context %}{% endblock %}
 
 {% block page_primary_action %}
-  {% link_for _('Acquire Dataset'), controller='package', action='search', class_="btn btn-primary", icon="shopping-cart" %}
+  {% link_for _('Acquire Dataset'), controller='dataset', action='search', class_="btn btn-primary", icon="shopping-cart" %}
 {% endblock %}
 
 {% block primary_content_inner %}
@@ -13,7 +13,7 @@
   {% else %}
     <p class="empty">
       {{ _('You haven\'t acquired any datasets.') }}
-      {% link_for _('Acquire one now?'), controller='package', action='search' %}
+      {% link_for _('Acquire one now?'), controller='dataset', action='search' %}
     </p>
   {% endif %}
 {% endblock %}

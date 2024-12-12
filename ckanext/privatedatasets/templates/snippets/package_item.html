@@ -47,11 +47,11 @@ Example:
         
         <!-- Customizations Acquire Button -->
         {% if package.private and not owner and not acquired %}
-            {{ h.link_to(h.truncate(title, truncate_title), h.url_for(controller='package', action='read', id=package.name)) }}
+            {{ h.link_to(h.truncate(title, truncate_title), h.url_for(controller='dataset', action='read', id=package.name)) }}
              <div class="divider"/>
             {{ h.acquire_button(package) }}
         {% else %}
-            {{ h.link_to(h.truncate(title, truncate_title), h.url_for(controller='package', action='read', id=package.name)) }}
+            {{ h.link_to(h.truncate(title, truncate_title), h.url_for(controller='dataset', action='read', id=package.name)) }}
         {% endif %}
         <!-- End of customizations Acquire Button -->
         
@@ -73,7 +73,7 @@ Example:
       <ul class="dataset-resources unstyled">
         {% for resource in h.dict_list_reduce(package.resources, 'format') %}
           <li>
-            <a href="{{ h.url_for(controller='package', action='read', id=package.name) }}" class="label" data-format="{{ resource.lower() }}">{{ resource }}</a>
+            <a href="{{ h.url_for(controller='dataset', action='read', id=package.name) }}" class="label" data-format="{{ resource.lower() }}">{{ resource }}</a>
           </li>
         {% endfor %}
       </ul>
