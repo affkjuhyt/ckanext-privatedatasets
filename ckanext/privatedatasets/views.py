@@ -20,13 +20,17 @@
 from __future__ import absolute_import, unicode_literals
 
 from ckan import logic, model
-from ckan.common import _, g
 from ckan.lib import base
+from ckan.common import _, g
 from ckan.plugins import toolkit
 
 from ckanext.privatedatasets import constants
+from flask import Blueprint, render_template, abort
+
+bp = Blueprint('privatedatasets', __name__)
 
 
+@bp.route('/dashboard/acquired')
 def acquired_datasets():
     context = {'auth_user_obj': g.userobj, 'for_view': True, 'model': model, 'session': model.Session, 'user': g.user}
     data_dict = {'user_obj': g.userobj}
@@ -34,18 +38,12 @@ def acquired_datasets():
         user_dict = toolkit.get_action('user_show')(context, data_dict)
         acquired_datasets = toolkit.get_action(constants.ACQUISITIONS_LIST)(context, None)
     except logic.NotFound:
-        base.abort(404, _('User not found'))
+        abort(404, _('User not found'))
     except logic.NotAuthorized:
-        base.abort(403, _('Not authorized to see this page'))
+        abort(403, _('Not authorized to see this page'))
 
     extra_vars = {
         'user_dict': user_dict,
         'acquired_datasets': acquired_datasets,
     }
-    return base.render('user/dashboard_acquired.html', extra_vars)
-
-
-# class AcquiredDatasetsControllerUI(base.BaseController):
-
-#     def acquired_datasets(self):
-#         return acquired_datasets()
+    return base.render('user/dashboard_acquired.html', extra_vars=extra_vars)

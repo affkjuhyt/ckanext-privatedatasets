@@ -4,7 +4,6 @@ from ckan import model, plugins as p
 from ckan.lib import search
 from ckan.lib.plugins import DefaultPermissionLabels
 from ckan.plugins import toolkit as tk
-from flask import Blueprint
 
 from ckanext.privatedatasets import auth, actions, constants, converters_validators as conv_val, db, helpers
 from ckanext.privatedatasets.views import acquired_datasets
@@ -13,15 +12,12 @@ from ckanext.privatedatasets.views import acquired_datasets
 HIDDEN_FIELDS = [constants.ALLOWED_USERS, constants.SEARCHABLE]
 
 
+@tk.blanket.blueprints
 class PrivateDatasets(p.SingletonPlugin, tk.DefaultDatasetForm, DefaultPermissionLabels):
-
     p.implements(p.IDatasetForm)
     p.implements(p.IAuthFunctions)
     p.implements(p.IConfigurer)
-    p.implements(p.IBlueprint)
-    # p.implements(p.IRoutes, inherit=True)
     p.implements(p.IActions)
-    p.implements(p.IPackageController, inherit=True)
     p.implements(p.ITemplateHelpers)
     p.implements(p.IPermissionLabels)
     p.implements(p.IResourceController)
@@ -35,7 +31,6 @@ class PrivateDatasets(p.SingletonPlugin, tk.DefaultDatasetForm, DefaultPermissio
 
     def _modify_package_schema(self):
         return {
-            # remove datasets_with_no_organization_cannot_be_private validator
             'private': [tk.get_validator('ignore_missing'),
                         tk.get_validator('boolean_validator')],
             constants.ALLOWED_USERS_STR: [tk.get_validator('ignore_missing'),
@@ -54,13 +49,11 @@ class PrivateDatasets(p.SingletonPlugin, tk.DefaultDatasetForm, DefaultPermissio
         }
 
     def create_package_schema(self):
-        # grab the default schema in our plugin
         schema = super(PrivateDatasets, self).create_package_schema()
         schema.update(self._modify_package_schema())
         return schema
 
     def update_package_schema(self):
-        # grab the default schema in our plugin
         schema = super(PrivateDatasets, self).update_package_schema()
         schema.update(self._modify_package_schema())
         return schema
@@ -92,14 +85,13 @@ class PrivateDatasets(p.SingletonPlugin, tk.DefaultDatasetForm, DefaultPermissio
     ######################################################################
 
     def get_auth_functions(self):
-        auth_functions = {'package_show': auth.package_show,
+        return {'package_show': auth.package_show,
                           'package_update': auth.package_update,
                           'resource_show': auth.resource_show,
                           constants.PACKAGE_ACQUIRED: auth.package_acquired,
                           constants.ACQUISITIONS_LIST: auth.acquisitions_list,
                           constants.PACKAGE_DELETED: auth.revoke_access}
 
-        return auth_functions
 
     ######################################################################
     ############################ ICONFIGURER #############################
@@ -113,26 +105,8 @@ class PrivateDatasets(p.SingletonPlugin, tk.DefaultDatasetForm, DefaultPermissio
         else:
             tk.add_template_directory(config, 'templates')
 
-        # Register this plugin's fanstatic directory with CKAN.
+        # Register this plugin's assets directory with CKAN.
         tk.add_resource('assets', 'privatedatasets')
-
-    ######################################################################
-    ############################# IBLUEPRINT #############################
-    ######################################################################
-
-    # Deprecated but Required for CKAN 2.7
-    def before_map(self, m):
-        if p.toolkit.check_ckan_version(max_version='2.7.99'):
-            m.connect('user_acquired_datasets', '/dashboard/acquired', ckan_icon='shopping-cart',
-                controller='ckanext.privatedatasets.views:AcquiredDatasetsControllerUI',
-                action='acquired_datasets', conditions=dict(method=['GET']))
-        return m
-
-    def get_blueprint(self):
-        blueprint = Blueprint('privatedatasets', self.__module__)
-        if p.toolkit.check_ckan_version(min_version='2.8'):
-            blueprint.add_url_rule('/dashboard/acquired', 'acquired_datasets', acquired_datasets)
-        return blueprint
 
     ######################################################################
     ############################## IACTIONS ##############################
@@ -221,7 +195,7 @@ class PrivateDatasets(p.SingletonPlugin, tk.DefaultDatasetForm, DefaultPermissio
 
     def after_show(self, context, pkg_dict):
 
-        void = False;
+        void = False
 
         for resource in pkg_dict['resources']:
             if resource == {}:

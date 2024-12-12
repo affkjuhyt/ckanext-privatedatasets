@@ -83,7 +83,7 @@ class PluginTest(unittest.TestCase):
             plugin.tk.add_template_directory.assert_called_once_with(config, 'templates_2.8')
         else:
             plugin.tk.add_template_directory.assert_called_once_with(config, 'templates')
-        plugin.tk.add_resource('fanstatic', 'privatedatasets')
+        plugin.tk.add_resource('assets', 'privatedatasets')
 
     def test_get_blueprint(self):
         # Call the method
