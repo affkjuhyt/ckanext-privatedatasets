@@ -1,11 +1,20 @@
 from __future__ import absolute_import
 
+from sqlalchemy import create_engine
 import sqlalchemy as sa
+
+from ckan.model.meta import metadata
 
 AllowedUser = None
 
+engine = create_engine(
+    "postgresql://ckan_default:123456@localhost/ckan_default")
+
 
 def init_db(model):
+
+    metadata.bind = engine
+    metadata.create_all(engine)
 
     global AllowedUser
     if AllowedUser is None:

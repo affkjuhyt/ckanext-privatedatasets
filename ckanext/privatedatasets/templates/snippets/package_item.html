@@ -47,11 +47,11 @@ Example:
         
         <!-- Customizations Acquire Button -->
         {% if package.private and not owner and not acquired %}
-            {{ h.link_to(h.truncate(title, truncate_title), h.url_for(controller='dataset', action='read', id=package.name)) }}
+            {{ h.link_to(title | truncate(title, truncate_title), h.url_for(controller='dataset', action='read', id=package.name)) }}
              <div class="divider"/>
             {{ h.acquire_button(package) }}
         {% else %}
-            {{ h.link_to(h.truncate(title, truncate_title), h.url_for(controller='dataset', action='read', id=package.name)) }}
+            {{ h.link_to(title | truncate(title, truncate_title), h.url_for(controller='dataset', action='read', id=package.name)) }}
         {% endif %}
         <!-- End of customizations Acquire Button -->
         

@@ -4,6 +4,7 @@ from ckan import model, plugins as p
 from ckan.lib import search
 from ckan.lib.plugins import DefaultPermissionLabels
 from ckan.plugins import toolkit as tk
+from ckan.plugins.interfaces import IPackageController, IResourceController
 
 from ckanext.privatedatasets import auth, actions, constants, converters_validators as conv_val, db, helpers
 from ckanext.privatedatasets.views import acquired_datasets
@@ -20,14 +21,20 @@ class PrivateDatasets(p.SingletonPlugin, tk.DefaultDatasetForm, DefaultPermissio
     p.implements(p.IActions)
     p.implements(p.ITemplateHelpers)
     p.implements(p.IPermissionLabels)
-    p.implements(p.IResourceController)
+    p.implements(IResourceController, inherit=True)
+    p.implements(IPackageController, inherit=True)
 
-    ######################################################################
-    ############################ DATASET FORM ############################
-    ######################################################################
+    def __init__(self, name=None):
+        self.indexer = search.PackageSearchIndex()
+        self.name = name or "privatedatasets"
 
-    # def __init__(self, name=None):
-    #     self.indexer = search.PackageSearchIndex()
+    def update_config(self, config):
+        if p.toolkit.check_ckan_version(min_version='2.8'):
+            tk.add_template_directory(config, 'templates_2.8')
+        else:
+            tk.add_template_directory(config, 'templates')
+
+        tk.add_resource('assets', 'privatedatasets')
 
     def _modify_package_schema(self):
         return {
@@ -71,46 +78,18 @@ class PrivateDatasets(p.SingletonPlugin, tk.DefaultDatasetForm, DefaultPermissio
         return schema
 
     def is_fallback(self):
-        # Return True to register this plugin as the default handler for
-        # package types not handled by any other IDatasetForm plugin.
         return True
 
     def package_types(self):
-        # This plugin doesn't handle any special package types, it just
-        # registers itself as the default (above).
         return []
-
-    ######################################################################
-    ########################### AUTH FUNCTIONS ###########################
-    ######################################################################
 
     def get_auth_functions(self):
         return {'package_show': auth.package_show,
-                          'package_update': auth.package_update,
-                          'resource_show': auth.resource_show,
-                          constants.PACKAGE_ACQUIRED: auth.package_acquired,
-                          constants.ACQUISITIONS_LIST: auth.acquisitions_list,
-                          constants.PACKAGE_DELETED: auth.revoke_access}
-
-
-    ######################################################################
-    ############################ ICONFIGURER #############################
-    ######################################################################
-
-    def update_config(self, config):
-        # Add this plugin's templates dir to CKAN's extra_template_paths, so
-        # that CKAN will use this plugin's custom templates.
-        if p.toolkit.check_ckan_version(min_version='2.8'):
-            tk.add_template_directory(config, 'templates_2.8')
-        else:
-            tk.add_template_directory(config, 'templates')
-
-        # Register this plugin's assets directory with CKAN.
-        tk.add_resource('assets', 'privatedatasets')
-
-    ######################################################################
-    ############################## IACTIONS ##############################
-    ######################################################################
+                'package_update': auth.package_update,
+                'resource_show': auth.resource_show,
+                constants.PACKAGE_ACQUIRED: auth.package_acquired,
+                constants.ACQUISITIONS_LIST: auth.acquisitions_list,
+                constants.PACKAGE_DELETED: auth.revoke_access}
 
     def get_actions(self):
         action_functions = {constants.PACKAGE_ACQUIRED: actions.package_acquired,
@@ -119,17 +98,12 @@ class PrivateDatasets(p.SingletonPlugin, tk.DefaultDatasetForm, DefaultPermissio
 
         return action_functions
 
-    ######################################################################
-    ######################### IPACKAGECONTROLLER #########################
-    ######################################################################
-
     def _delete_pkg_atts(self, pkg_dict, attrs):
         for attr in attrs:
             if attr in pkg_dict:
                 del pkg_dict[attr]
 
     def before_index(self, pkg_dict):
-
         if 'extras_' + constants.SEARCHABLE in pkg_dict:
             if pkg_dict['extras_searchable'] == 'False':
                 pkg_dict['capacity'] = 'private'
@@ -139,6 +113,9 @@ class PrivateDatasets(p.SingletonPlugin, tk.DefaultDatasetForm, DefaultPermissio
         return pkg_dict
 
     def after_create(self, context, pkg_dict):
+        self.after_dataset_create(context=context, pkg_dict=pkg_dict)
+
+    def after_dataset_create(self, context, pkg_dict):
         session = context['session']
         update_cache = False
 
@@ -146,12 +123,12 @@ class PrivateDatasets(p.SingletonPlugin, tk.DefaultDatasetForm, DefaultPermissio
 
         # Get the users and the package ID
         if constants.ALLOWED_USERS in pkg_dict:
-
             allowed_users = pkg_dict[constants.ALLOWED_USERS]
             package_id = pkg_dict['id']
 
             # Get current users
             users = db.AllowedUser.get(package_id=package_id)
+            print("users: ", users)
 
             # Delete users and save the list of current users
             current_users = []
@@ -161,12 +138,14 @@ class PrivateDatasets(p.SingletonPlugin, tk.DefaultDatasetForm, DefaultPermissio
                     session.delete(user)
                     update_cache = True
 
+            print("current_user: ", current_users)
             # Add non existing users
             for user_name in allowed_users:
-                if user_name not in current_users:
+                if user_name.get('value') not in current_users:
+                    print("username: ", user_name.get('value'))
                     out = db.AllowedUser()
                     out.package_id = package_id
-                    out.user_name = user_name
+                    out.user_name = user_name.get('value')
                     out.save()
                     session.add(out)
                     update_cache = True
@@ -184,17 +163,17 @@ class PrivateDatasets(p.SingletonPlugin, tk.DefaultDatasetForm, DefaultPermissio
                     {'id': package_id})
 
                 # Prevent acquired datasets jumping to the first position
-                revision = tk.get_action('revision_show')({'ignore_auth': True}, {'id': new_pkg_dict['revision_id']})
-                new_pkg_dict['metadata_modified'] = revision.get('timestamp', '')
+                revision = tk.get_action('package_activity_list')({'ignore_auth': True}, {'id': new_pkg_dict['id']})
+                print("revision: ", revision)
+                new_pkg_dict['metadata_modified'] = revision[0].get('timestamp', '')
                 self.indexer.update_dict(new_pkg_dict)
 
         return pkg_dict
 
-    def after_update(self, context, pkg_dict):
+    def after_dataset_update(self, context, pkg_dict):
         return self.after_create(context, pkg_dict)
 
-    def after_show(self, context, pkg_dict):
-
+    def after_dataset_show(self, context, pkg_dict):
         void = False
 
         for resource in pkg_dict['resources']:
@@ -219,7 +198,7 @@ class PrivateDatasets(p.SingletonPlugin, tk.DefaultDatasetForm, DefaultPermissio
 
         return pkg_dict
 
-    def after_delete(self, context, pkg_dict):
+    def after_dataset_delete(self, context, pkg_dict):
         session = context['session']
         package_id = pkg_dict['id']
 
@@ -234,7 +213,7 @@ class PrivateDatasets(p.SingletonPlugin, tk.DefaultDatasetForm, DefaultPermissio
 
         return pkg_dict
 
-    def after_search(self, search_results, search_params):
+    def after_dataset_search(self, search_results, search_params):
         for result in search_results['results']:
             # Extra fields should not be returned
             # The original list cannot be modified
@@ -260,11 +239,11 @@ class PrivateDatasets(p.SingletonPlugin, tk.DefaultDatasetForm, DefaultPermissio
 
         return search_results
 
-    ####
     def before_view(self, pkg_dict):
+        return self.before_dataset_view(pkg_dict=pkg_dict)
 
+    def before_dataset_view(self, pkg_dict):
         for resource in pkg_dict['resources']:
-
             context = {
                 'model': model,
                 'session': model.Session,
@@ -275,8 +254,9 @@ class PrivateDatasets(p.SingletonPlugin, tk.DefaultDatasetForm, DefaultPermissio
             try:
                 tk.check_access('resource_show', context, resource)
             except tk.NotAuthorized:
+                print("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%")
                 pkg_dict['resources'].remove(resource)
-                pkg_dict = self.before_view(pkg_dict)
+                # pkg_dict = self.before_view(pkg_dict)
         return pkg_dict
 
     def get_dataset_labels(self, dataset_obj):
@@ -295,21 +275,7 @@ class PrivateDatasets(p.SingletonPlugin, tk.DefaultDatasetForm, DefaultPermissio
         labels.append('searchable')
         return labels
 
-    ######################################################################
-    ######################### IRESOURCECONTROLLER ########################
-    ######################################################################
-
-    def before_create(self, context, resource):
-        pass
-
-    def before_update(self, context, current, resource):
-        pass
-
-    def before_delete(self, context, resource, resources):
-        pass
-
-    def before_show(self, resource_dict):
-
+    def before_resource_show(self, resource_dict):
         context = {
             'model': model,
             'session': model.Session,
@@ -322,10 +288,6 @@ class PrivateDatasets(p.SingletonPlugin, tk.DefaultDatasetForm, DefaultPermissio
         except tk.NotAuthorized:
             resource_dict.clear()
         return resource_dict
-
-    ######################################################################
-    ######################### ITEMPLATESHELPER ###########################
-    ######################################################################
 
     def get_helpers(self):
         return {'is_dataset_acquired': helpers.is_dataset_acquired,

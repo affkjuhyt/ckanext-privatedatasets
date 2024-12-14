@@ -31,8 +31,9 @@ def is_owner(pkg_dict):
 
 
 def get_allowed_users_str(users):
+    print("users: ", users)
     if users:
-        return ','.join([user for user in users])
+        return ','.join([user.get('value') for user in users])
     else:
         return ''
 

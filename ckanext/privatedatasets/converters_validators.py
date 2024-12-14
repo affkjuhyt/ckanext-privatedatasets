@@ -12,7 +12,7 @@ from ckanext.privatedatasets import constants, db
 
 
 def private_datasets_metadata_checker(key, data, errors, context):
-
+    print("SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS")
     dataset_id = data.get(('id',))
     private_val = data.get(('private',))
 
@@ -35,7 +35,7 @@ def private_datasets_metadata_checker(key, data, errors, context):
 
 
 def allowed_users_convert(key, data, errors, context):
-
+    print("MMMMMMMMMMMMMMMMMMMMMMMMMM")
     # By default, all the fileds are in the data dictionary even if they contains nothing. In this case,
     # the value is 'ckan.lib.navl.dictization_functions.Missing' and for this reason the type is checked
 
@@ -48,6 +48,7 @@ def allowed_users_convert(key, data, errors, context):
     else:
         allowed_users = None
 
+    print("allowed_users: ", allowed_users)
     if allowed_users is not None:
         current_index = max([int(k[1]) for k in data.keys() if len(k) == 2 and k[0] == key[0]] + [-1])
 
@@ -56,10 +57,13 @@ def allowed_users_convert(key, data, errors, context):
         else:
             for num, allowed_user in zip(count(current_index + 1), allowed_users):
                 allowed_user = allowed_user.strip()
-                data[(key[0], num)] = allowed_user
+                data[(key[0], num, 'value')] = allowed_user
+
+    print("data: ", data)
 
 
 def get_allowed_users(key, data, errors, context):
+    print("7777777777777777777")
     pkg_id = data[('id',)]
 
     db.init_db(context['model'])
@@ -67,7 +71,7 @@ def get_allowed_users(key, data, errors, context):
     users = db.AllowedUser.get(package_id=pkg_id)
 
     for i, user in enumerate(users):
-        data[(key[0], i)] = user.user_name
+        data[(key[0], i, 'value')] = user.user_name
 
 
 def url_checker(key, data, errors, context):
