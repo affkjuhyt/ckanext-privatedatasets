@@ -176,13 +176,14 @@ class PrivateDatasets(p.SingletonPlugin, tk.DefaultDatasetForm, DefaultPermissio
     def after_dataset_show(self, context, pkg_dict):
         void = False
 
-        for resource in pkg_dict['resources']:
-            if resource == {}:
-                void = True
+        if 'resources' in pkg_dict:
+            for resource in pkg_dict['resources']:
+                if resource == {}:
+                    void = True
 
-        if void:
-            del pkg_dict['resources']
-            del pkg_dict['num_resources']
+            if void:
+                del pkg_dict['resources']
+                del pkg_dict['num_resources']
 
         user_obj = context.get('auth_user_obj')
         updating_via_api = context.get(constants.CONTEXT_CALLBACK, False)
@@ -252,6 +253,8 @@ class PrivateDatasets(p.SingletonPlugin, tk.DefaultDatasetForm, DefaultPermissio
             }
 
             try:
+                print("check access to resource_show", context)
+                print("resource: ", resource)
                 tk.check_access('resource_show', context, resource)
             except tk.NotAuthorized:
                 print("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%")
