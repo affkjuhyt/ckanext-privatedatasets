@@ -38,6 +38,7 @@ def allowed_users_convert(key, data, errors, context):
     # the value is 'ckan.lib.navl.dictization_functions.Missing' and for this reason the type is checked
 
     # Get the allowed user list
+    data.pop(('__junk',), None)
     if (constants.ALLOWED_USERS,) in data and isinstance(data[(constants.ALLOWED_USERS,)], list):
         allowed_users = data[(constants.ALLOWED_USERS,)]
     elif (constants.ALLOWED_USERS_STR,) in data and isinstance(data[(constants.ALLOWED_USERS_STR,)], six.string_types):

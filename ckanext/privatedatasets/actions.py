@@ -54,7 +54,6 @@ def acquisitions_list(context, data_dict):
     :return: The list of datarequest that has been acquired by the specified user
     :rtype: list
     '''
-    print("BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB")
     if data_dict is None:
         data_dict = {}
 
@@ -130,7 +129,6 @@ def revoke_access(context, request_data):
 def _process_package(context, request_data):
     log.info('Notification received: %s' % request_data)
 
-    print("EEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEe")
     # Check access
     method = constants.PACKAGE_ACQUIRED if context.get('method') == 'grant' else constants.PACKAGE_DELETED
     plugins.toolkit.check_access(method, context, request_data)

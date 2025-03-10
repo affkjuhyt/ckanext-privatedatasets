@@ -9,6 +9,7 @@ from ckan.plugins.interfaces import IPackageController, IResourceController
 from ckanext.privatedatasets import auth, actions, constants, converters_validators as conv_val, db, helpers
 from ckanext.privatedatasets.views import acquired_datasets
 
+from datetime import datetime
 
 HIDDEN_FIELDS = [constants.ALLOWED_USERS, constants.SEARCHABLE]
 
@@ -164,8 +165,9 @@ class PrivateDatasets(p.SingletonPlugin, tk.DefaultDatasetForm, DefaultPermissio
 
                 # Prevent acquired datasets jumping to the first position
                 revision = tk.get_action('package_activity_list')({'ignore_auth': True}, {'id': new_pkg_dict['id']})
-                print("revision: ", revision)
-                new_pkg_dict['metadata_modified'] = revision[0].get('timestamp', '')
+                new_pkg_dict['metadata_modified'] = (
+                    revision[0].get('timestamp') if revision else datetime.utcnow().isoformat()
+                )
                 self.indexer.update_dict(new_pkg_dict)
 
         return pkg_dict
